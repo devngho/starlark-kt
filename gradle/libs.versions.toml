@@ -1,0 +1,25 @@
+[versions]
+kotlin = "2.4.10"
+
+# testing
+kotest = "6.1.4"
+mockk = "1.14.9"
+
+# Required by the Kotest Gradle plugin.
+ksp = "2.3.6"
+
+bignum = "0.3.10"
+
+[libraries]
+kotest-framework-engine = { module = "io.kotest:kotest-framework-engine", version.ref = "kotest" }
+kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+
+kotlin-test-common = { module = "org.jetbrains.kotlin:kotlin-test-common", version.ref = "kotlin" }
+kotlin-test-annotations-common = { module = "org.jetbrains.kotlin:kotlin-test-annotations-common", version.ref = "kotlin" }
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+
+kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+
+bignum = { module = "com.ionspin.kotlin:bignum", version.ref = "bignum" }
+bignum-serialization-kotlinx = { module = "com.ionspin.kotlin:bignum-serialization-kotlinx", version.ref = "bignum" }
