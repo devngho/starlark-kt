@@ -23,20 +23,25 @@ class TokenizerTest: FunSpec({
         ),
         "something = baz()" to listOf(
             Token(type= RawToken.Identifier(value = "something"), line=1, column=0),
-            Token(type= RawToken.Whitespace(value = ' '), line=1, column=9),
+            Token(type= RawToken.Whitespace(value = " "), line=1, column=9),
             Token(type= RawToken.Punctuation(value = "="), line=1, column=10),
-            Token(type= RawToken.Whitespace(value = ' '), line=1, column=11),
+            Token(type= RawToken.Whitespace(value = " "), line=1, column=11),
             Token(type= RawToken.Identifier(value = "baz"), line=1, column=12),
             Token(type= RawToken.Punctuation(value = "("), line=1, column=15),
             Token(type= RawToken.Punctuation(value =")"), line=1, column=16)
         ),
         "a <<= 5" to listOf(
             Token(type= RawToken.Identifier(value = "a"), line=1, column=0),
-            Token(type= RawToken.Whitespace(value = ' '), line=1, column=1),
+            Token(type= RawToken.Whitespace(value = " "), line=1, column=1),
             Token(type= RawToken.Punctuation(value = "<<="), line=1, column=2),
-            Token(type= RawToken.Whitespace(value = ' '), line=1, column=5),
-            Token(type= RawToken.IntLiteral(value = 5.toBigInteger()), line=1, column=6)
+            Token(type= RawToken.Whitespace(value = " "), line=1, column=5),
+            Token(type= RawToken.IntLiteral(value = "5", literal = 5.toBigInteger()), line=1, column=6)
         ),
+        """("string literal")""" to listOf(
+            Token(type= RawToken.Punctuation(value = "("), line=1, column=0),
+            Token(type= RawToken.StringLiteral(value = "string literal", literal = "string literal"), line=1, column=1),
+            Token(type= RawToken.Punctuation(value = ")"), line=1, column=17)
+        )
 //        """
 //            |a = .234e+1
 //            |b = 0. + .0 + 0e0
@@ -53,10 +58,8 @@ class TokenizerTest: FunSpec({
         val tokenizer = Tokenizer((testcase as Pair<String, List<*>>).first)
         val tokens = tokenizer.tokenize()
 
-        println("Tokens for '$testcase': ${tokens.getOrNull()?.joinToString("\n")}")
-
         tokens.shouldBeSuccess {
-            it.shouldBe (testcase.second)
+            it.shouldBe(testcase.second)
         }
 
     }

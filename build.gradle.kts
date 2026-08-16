@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
@@ -15,7 +16,12 @@ repositories {
 }
 
 kotlin {
-    jvm()
+    jvm {
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        mainRun {
+            mainClass.set("io.github.devngho.starlarkkt.cli.MainKt")
+        }
+    }
 
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {

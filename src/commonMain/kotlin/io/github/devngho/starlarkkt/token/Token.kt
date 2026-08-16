@@ -4,10 +4,11 @@ import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import com.ionspin.kotlin.bignum.integer.BigInteger
 
 sealed interface RawToken {
+    val value: String
     val isIgnored: Boolean
         get() = false
 
-    data class Whitespace(val value: Char) : RawToken {
+    data class Whitespace(override val value: String) : RawToken {
         override val isIgnored: Boolean = true
 
         companion object {
@@ -15,7 +16,7 @@ sealed interface RawToken {
         }
     }
 
-    data class Punctuation(val value: String) : RawToken {
+    data class Punctuation(override val value: String) : RawToken {
         companion object {
             val validPunctuations = """+    -    *    /    //   %    **
 ~    &    |    ^    <<   >>
@@ -25,18 +26,20 @@ sealed interface RawToken {
 +=   -=   *=   /=   //=  %=
 &=   |=   ^=   <<=  >>=""".split(" ", "\n").map { it.trim() }.filter { it.isNotEmpty() }
 
-            val validBinaryOps = listOf("+", "-", "*", "/", "//", "%", "**", "&", "|", "^", "<<", ">>", "<", ">", ">=", "<=", "==", "!=")
+            val validBinaryOps = listOf("+", "-", "*", "/", "//", "%", "**", "&", "|", "^", "<<", ">>", "<", ">", ">=", "<=", "==", "!=", ".")
             val validUnaryOps = listOf("+", "-", "~")
 
             val validPunctuationsByLength = validPunctuations.groupBy { it.length }
         }
+
+        override fun toString(): String = value
     }
 
-    data class Comment(val value: String) : RawToken {
+    data class Comment(override val value: String) : RawToken {
         override val isIgnored: Boolean = true
     }
 
-    data class Keyword(val value: String) : RawToken {
+    data class Keyword(override val value: String) : RawToken {
         companion object {
             val validKeywords = listOf(
                 "and", "else", "load", "break", "for", "not", "continue", "if", "or", "def", "in", "pass", "elif", "lambda", "return"
@@ -48,13 +51,15 @@ sealed interface RawToken {
             val validBinaryKeywords = listOf("and", "or", "in")
             val validUnaryKeywords = listOf("not")
         }
+
+        override fun toString(): String = value
     }
 
-    data class Identifier(val value: String) : RawToken
+    data class Identifier(override val value: String) : RawToken
 
-    data class StringLiteral(val value: String) : RawToken
-    data class IntLiteral(val value: BigInteger) : RawToken
-    data class DecimalLiteral(val value: BigDecimal) : RawToken
+    data class StringLiteral(override val value: String, val literal: String) : RawToken
+    data class IntLiteral(override val value: String, val literal: BigInteger) : RawToken
+    data class DecimalLiteral(override val value: String, val literal: BigDecimal) : RawToken
 }
 
 data class Token<out T : RawToken>(

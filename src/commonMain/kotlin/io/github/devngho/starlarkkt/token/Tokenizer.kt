@@ -33,7 +33,7 @@ class Tokenizer(
 
             return try {
                 val value = BigInteger.parseString(digits, 8)
-                Result.success(RawToken.IntLiteral(value))
+                Result.success(RawToken.IntLiteral(digits, value))
             } catch (e: NumberFormatException) {
                 Result.failure(IllegalStateException("Invalid octal literal"))
             }
@@ -54,7 +54,7 @@ class Tokenizer(
 
             return try {
                 val value = BigInteger.parseString(digits, 16)
-                Result.success(RawToken.IntLiteral(value))
+                Result.success(RawToken.IntLiteral(digits, value))
             } catch (e: NumberFormatException) {
                 Result.failure(IllegalStateException("Invalid hexadecimal literal"))
             }
@@ -93,7 +93,7 @@ class Tokenizer(
             (sign?.toString() ?: "") + digits
         } else ""
 
-        if (intPart.isNotEmpty() && intPart.startsWith("0") && !maybeDot && !maybeExponent) {
+        if (intPart.isNotEmpty() && intPart.startsWith("0") && intPart != "0" && !maybeDot && !maybeExponent) {
             return Result.failure(IllegalStateException("Invalid number literal with leading zero"))
         }
 
@@ -106,8 +106,9 @@ class Tokenizer(
                 val exponentValue = if (exponentPart.isEmpty()) "0" else exponentPart
 
                 val value = BigDecimal.parseString("$intValue.$decimalValue" + if (exponentPart.isNotEmpty()) "e$exponentValue" else "")
+                val rawString = intValue + if (maybeDot) ".$decimalValue" else "" + if (maybeExponent) "e$exponentValue" else ""
 
-                Result.success(RawToken.DecimalLiteral(value))
+                Result.success(RawToken.DecimalLiteral(rawString, value))
             } catch (e: NumberFormatException) {
                 Result.failure(IllegalStateException("Invalid decimal literal"))
             }
@@ -116,7 +117,7 @@ class Tokenizer(
 
             return try {
                 val value = BigInteger.parseString(intPart)
-                Result.success(RawToken.IntLiteral(value))
+                Result.success(RawToken.IntLiteral(intPart, value))
             } catch (e: NumberFormatException) {
                 Result.failure(IllegalStateException("Invalid integer literal"))
             }
@@ -191,8 +192,8 @@ class Tokenizer(
                     continue
                 }
 
-                if (peekChars(quote.length) == quote) {
-                    position += quote.length
+                if ("$char"+peekChars(quote.length-1) == quote) {
+                    position += quote.length - 1
                     break
                 }
 
@@ -204,7 +205,7 @@ class Tokenizer(
             }
         }
 
-        return Result.success(RawToken.StringLiteral(body))
+        return Result.success(RawToken.StringLiteral(body, body))
     }
 
     private fun parseIdentifierOrKeyword(): Result<RawToken> {
@@ -241,13 +242,22 @@ class Tokenizer(
             when {
                 char == '\n' -> {
                     nextChar()
-                    tokens.add(Token(RawToken.Whitespace(char), line, column))
+                    tokens.add(Token(RawToken.Whitespace(char.toString()), line, column))
                     line++
                     offset = position
                 }
 
                 char in RawToken.Whitespace.validWhitespaces -> {
-                    tokens.add(Token(RawToken.Whitespace(nextChar()!!), line, column))
+                    tokens.add(Token(RawToken.Whitespace(nextChar()!!.toString()), line, column))
+                }
+
+                char == '#' -> {
+                    val comment = buildString {
+                        while (peekChar() != '\n' && peekChar() != null) {
+                            append(nextChar())
+                        }
+                    }
+                    tokens.add(Token(RawToken.Comment(comment), line, column))
                 }
 
                 char.isDigit() || peekChars(2)?.let { it[0] == '.' && it[1].isDigit() } == true -> tokens.add(
