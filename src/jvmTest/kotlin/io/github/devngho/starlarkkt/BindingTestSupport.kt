@@ -5,7 +5,6 @@ import io.github.devngho.starlarkkt.ast.Parser
 import io.github.devngho.starlarkkt.ast.statement.AssignStatement
 import io.github.devngho.starlarkkt.ast.statement.ExpressionStatement
 import io.github.devngho.starlarkkt.ast.statement.File
-import io.github.devngho.starlarkkt.expression.Binding
 import io.github.devngho.starlarkkt.expression.Expression
 import io.github.devngho.starlarkkt.token.RawToken
 import io.github.devngho.starlarkkt.token.Token

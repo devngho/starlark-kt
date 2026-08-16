@@ -11,6 +11,7 @@ import io.github.devngho.starlarkkt.ast.statement.File
 import io.github.devngho.starlarkkt.ast.statement.IfStatement
 import io.github.devngho.starlarkkt.ast.statement.Statement
 import io.github.devngho.starlarkkt.expression.Binding
+import io.github.devngho.starlarkkt.expression.BindingId
 import io.github.devngho.starlarkkt.expression.BindingScope
 import io.github.devngho.starlarkkt.expression.Expression
 import io.kotest.core.spec.style.FunSpec
@@ -20,16 +21,16 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 class ResolverTest : FunSpec({
     test("exposes structural bindings when constructed") {
         // Given
-        val global = Binding(id = 0, scope = BindingScope.GLOBAL)
-        val predeclared = Binding(id = 0, scope = BindingScope.PREDECLARED)
+        val global = Binding(id = BindingId(0), scope = BindingScope.GLOBAL)
+        val predeclared = Binding(id = BindingId(1), scope = BindingScope.PREDECLARED)
 
         // When
         val error = UnresolvedIdentifierException("missing")
 
         // Then
-        global shouldBe Binding(id = 0, scope = BindingScope.GLOBAL)
-        global shouldBe BindingScope.GLOBAL.let { Binding(id = 0, scope = it) }
-        (global == Binding(id = 1, scope = BindingScope.GLOBAL)) shouldBe false
+        global shouldBe Binding(id = BindingId(0), scope = BindingScope.GLOBAL)
+        global shouldBe Binding(id = BindingId(0), scope = BindingScope.GLOBAL)
+        (global == Binding(id = BindingId(1), scope = BindingScope.GLOBAL)) shouldBe false
         (global == predeclared) shouldBe false
         BindingScope.entries.toSet() shouldBe setOf(
             BindingScope.GLOBAL,
@@ -59,8 +60,8 @@ class ResolverTest : FunSpec({
         val resolver = Resolver.create(file, emptySet()).getOrThrow()
 
         // Then
-        resolver.resolve("x").getOrThrow() shouldBe Binding(0, BindingScope.GLOBAL)
-        resolver.resolve("y").getOrThrow() shouldBe Binding(1, BindingScope.GLOBAL)
+        resolver.resolve("x").getOrThrow() shouldBe Binding(BindingId(0), BindingScope.GLOBAL)
+        resolver.resolve("y").getOrThrow() shouldBe Binding(BindingId(1), BindingScope.GLOBAL)
     }
 
     test("allocates globals before sorted unshadowed predeclared names") {
@@ -78,10 +79,10 @@ class ResolverTest : FunSpec({
         val second = Resolver.create(file, linkedSetOf("a", "z", "x")).getOrThrow()
 
         // Then
-        first.resolve("y").getOrThrow() shouldBe Binding(0, BindingScope.GLOBAL)
-        first.resolve("x").getOrThrow() shouldBe Binding(1, BindingScope.GLOBAL)
-        first.resolve("a").getOrThrow() shouldBe Binding(2, BindingScope.PREDECLARED)
-        first.resolve("z").getOrThrow() shouldBe Binding(3, BindingScope.PREDECLARED)
+        first.resolve("y").getOrThrow() shouldBe Binding(BindingId(0), BindingScope.GLOBAL)
+        first.resolve("x").getOrThrow() shouldBe Binding(BindingId(1), BindingScope.GLOBAL)
+        first.resolve("a").getOrThrow() shouldBe Binding(BindingId(2), BindingScope.PREDECLARED)
+        first.resolve("z").getOrThrow() shouldBe Binding(BindingId(3), BindingScope.PREDECLARED)
         second.resolve("a").getOrThrow() shouldBe first.resolve("a").getOrThrow()
         second.resolve("z").getOrThrow() shouldBe first.resolve("z").getOrThrow()
     }
