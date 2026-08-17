@@ -104,6 +104,13 @@ class Binder(predeclared: Set<String> = emptySet()) {
                 expression.copy(operand = operand)
             }
 
+            is Expression.ConditionalOp -> {
+                val condition = bindExpression(expression.condition, resolver, budget).getOrElse { return@visit Result.failure(it) }
+                val thenBranch = bindExpression(expression.trueBranch, resolver, budget).getOrElse { return@visit Result.failure(it) }
+                val elseBranch = bindExpression(expression.falseBranch, resolver, budget).getOrElse { return@visit Result.failure(it) }
+                Result.success(expression.copy(condition = condition, trueBranch = thenBranch, falseBranch = elseBranch))
+            }
+
             is Expression.SubscriptOp -> {
                 val target = bindExpression(expression.expression, resolver, budget).getOrElse { return@visit Result.failure(it) }
                 bindExpression(expression.index, resolver, budget).map { index -> expression.copy(expression = target, index = index) }
@@ -162,6 +169,12 @@ class Binder(predeclared: Set<String> = emptySet()) {
             }
         } else {
             bindExpression(expression, resolver, budget)
+        }
+        is Expression.ConditionalOp -> budget.visit {
+            val condition = bindAttributeContext(expression.condition, resolver, budget).getOrElse { return@visit Result.failure(it) }
+            val trueBranch = bindAttributeContext(expression.trueBranch, resolver, budget).getOrElse { return@visit Result.failure(it) }
+            val falseBranch = bindAttributeContext(expression.falseBranch, resolver, budget).getOrElse { return@visit Result.failure(it) }
+            Result.success(expression.copy(condition = condition, trueBranch = trueBranch, falseBranch = falseBranch))
         }
         is Expression.InvokeOp -> budget.visit {
             val callee = bindAttributeContext(expression.callee, resolver, budget).getOrElse { return@visit Result.failure(it) }

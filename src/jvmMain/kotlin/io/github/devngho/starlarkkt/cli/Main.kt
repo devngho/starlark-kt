@@ -151,6 +151,11 @@ private fun MutableList<String>.renderExpression(expression: Expression) {
             renderExpression(expression.right)
         }
         is Expression.UnaryOp -> renderExpression(expression.operand)
+        is Expression.ConditionalOp -> {
+            renderExpression(expression.condition)
+            renderExpression(expression.trueBranch)
+            renderExpression(expression.falseBranch)
+        }
         is Expression.SubscriptOp -> {
             renderExpression(expression.expression)
             renderExpression(expression.index)

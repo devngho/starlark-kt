@@ -14,27 +14,43 @@ sealed interface Value {
     data class Decimal(val value: BigDecimal): Value
     data class String(val value: kotlin.String): Value
 
-    data class Runnable(val implementation: (List<Value>) -> Value): Value
+    interface IRunnable: Value {
+        val implementation: (List<Value>) -> Value
+    }
+
+    data class Runnable(override val implementation: (List<Value>) -> Value): IRunnable
+    data class Iterable(val implementation: () -> Iterator<Value>): Value
+
+    data class BuiltinObject(val mappings: Map<kotlin.String, Any>, val type: Type): Value
+    data class Type(val name: kotlin.String, val default: (List<Value>, Type) -> Value, val methods: Map<kotlin.String, Runnable>): IRunnable {
+        override val implementation: (List<Value>) -> Value
+            get() = { args -> default(args, this) }
+    }
 
     fun toBoolean(): Boolean {
         return when (this) {
             is Unit -> false
-            is Runnable -> true
             is Int -> value != BigInteger.ZERO
             is Decimal -> value != BigDecimal.ZERO
             is String -> value.isNotEmpty()
             is Bool -> this is True
+            is Iterable -> true
+            is IRunnable -> true
+            is BuiltinObject -> true
         }
     }
 
     fun toStringValue(): kotlin.String {
         return when (this) {
             is Unit -> "<unit>"
-            is Runnable -> "<runnable>"
             is Int -> value.toString()
             is Decimal -> value.toString()
             is String -> value
             is Bool -> if (this is True) "true" else "false"
+            is Iterable -> "<builtin iterable>"
+            is Type -> "<type $name>"
+            is IRunnable -> "<runnable>"
+            is BuiltinObject -> "<builtin object of type ${type.name}>"
         }
     }
 }

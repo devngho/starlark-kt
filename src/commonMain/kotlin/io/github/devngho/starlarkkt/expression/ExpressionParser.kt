@@ -4,7 +4,7 @@ import io.github.devngho.starlarkkt.ast.Lexer
 import io.github.devngho.starlarkkt.token.RawToken
 
 object ExpressionParser {
-    fun parseExpression(lexer: Lexer, precedence: Int = 0): Result<Expression> {
+    fun parseExpression(lexer: Lexer, precedence: Int = -100): Result<Expression> {
         // pratt parsing
 
         var left = lexer.next().let { token ->
@@ -19,6 +19,11 @@ object ExpressionParser {
                 is RawToken.Identifier -> Expression.Identifier(type.value, null)
                 is RawToken.Keyword -> {
                     if (type.value in RawToken.Keyword.validUnaryKeywords) {
+                        // consume whitespace after unary operator
+                        while (lexer.peek(false)?.type is RawToken.Whitespace) {
+                            lexer.next(false)
+                        }
+
                         val operand = parseExpression(lexer, Expression.UnaryOp.opPrecedence[type.value] ?: 0).getOrElse { return Result.failure(it) }
                         Expression.UnaryOp(token, operand)
                     } else if (type.value == "lambda") {
@@ -127,6 +132,10 @@ object ExpressionParser {
                 lexer.next() // consume '('
                 val args = mutableListOf<Expression>()
                 while (true) {
+                    if (lexer.peek()?.type is RawToken.Punctuation && lexer.peek()?.type?.value == ")") {
+                        break
+                    }
+
                     val arg = parseExpression(lexer).getOrElse { return Result.failure(it) }
                     args.add(arg)
                     if (lexer.peek()?.type is RawToken.Punctuation && lexer.peek()?.type?.value == ",") {
@@ -204,6 +213,24 @@ object ExpressionParser {
                     }
                 } else {
                     return Result.failure(IllegalArgumentException("Expected ']', but got: $nextTokenAfterArgs"))
+                }
+
+                continue
+            }
+
+            // if the next token is `if`, then this is a conditional expression
+            if (lexer.peek()?.type is RawToken.Keyword && lexer.peek()?.type?.value == "if") {
+                lexer.next() // consume 'if'
+                lexer.next(false) // consume whitespace after 'if'
+
+                val condition = parseExpression(lexer).getOrElse { return Result.failure(it) }
+                if (lexer.peek()?.type is RawToken.Keyword && lexer.peek()?.type?.value == "else") {
+                    lexer.next() // consume 'else'
+                    lexer.next(false) // consume whitespace after 'else'
+                    val elseExpr = parseExpression(lexer, 0).getOrElse { return Result.failure(it) }
+                    left = Expression.ConditionalOp(left, condition, elseExpr)
+                } else {
+                    return Result.failure(IllegalArgumentException("Expected 'else', but got: ${lexer.peek()}"))
                 }
 
                 continue

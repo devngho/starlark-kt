@@ -10,11 +10,11 @@ import io.github.devngho.starlarkkt.ast.statement.Statement
 import io.github.devngho.starlarkkt.expression.Binding
 import io.github.devngho.starlarkkt.expression.Expression
 
-class Interpreter(val file: File, val predeclarations: Map<String, Binding>, val globalContext: ContextDeclarations) {
+class Interpreter(val file: File, val predeclarations: Map<String, Binding>, val globalContext: Map<String, Value>) {
     fun run() {
         val context = Context(globalContext.mapKeys {
             predeclarations[it.key]?.id ?: throw IllegalArgumentException("No value found for identifier: ${it.key}. Is this defined also in the resolver?")
-        }.toMutableMap(), null)
+        }.toMutableMap(), predeclarations.mapValues { it.value.id }, null)
 
         for (statement in file.statements) {
             evaluateStatement(statement, context)
@@ -25,7 +25,7 @@ class Interpreter(val file: File, val predeclarations: Map<String, Binding>, val
         when (statement) {
             is ExpressionStatement -> evaluateExpression(statement.expression, context)
             is Block -> {
-                val blockContext = Context(mutableMapOf(), context)
+                val blockContext = Context(mutableMapOf(), context.globalNames, context)
                 for (stmt in statement.statements) {
                     evaluateStatement(stmt, blockContext)
                 }
@@ -50,7 +50,7 @@ class Interpreter(val file: File, val predeclarations: Map<String, Binding>, val
                 }
             }
             is File -> {
-                val fileContext = Context(mutableMapOf(), context)
+                val fileContext = Context(mutableMapOf(), context.globalNames, context)
                 for (stmt in statement.statements) {
                     evaluateStatement(stmt, fileContext)
                 }
@@ -63,7 +63,7 @@ class Interpreter(val file: File, val predeclarations: Map<String, Binding>, val
         is Expression.DecimalLiteral -> Value.Decimal(expression.value)
         is Expression.StringLiteral -> Value.String(expression.value)
         is Expression.LambdaLiteral -> Value.Runnable { args ->
-            val lambdaContext = Context(mutableMapOf(), context)
+            val lambdaContext = Context(mutableMapOf(), context.globalNames, context)
             expression.parameters.forEachIndexed { index, param ->
                 val bindingId = param.binding?.id
                     ?: throw IllegalArgumentException("Unbound identifier in lambda parameter: ${param.name}")
@@ -82,7 +82,7 @@ class Interpreter(val file: File, val predeclarations: Map<String, Binding>, val
             val calleeValue = evaluateExpression(expression.callee, context)
             val argumentValues = expression.arguments.map { evaluateExpression(it, context) }
 
-            if (calleeValue is Value.Runnable) {
+            if (calleeValue is Value.IRunnable) {
                 calleeValue.implementation(argumentValues)
             } else {
                 throw IllegalArgumentException("Callee is not a function: $calleeValue")
@@ -180,7 +180,45 @@ class Interpreter(val file: File, val predeclarations: Map<String, Binding>, val
                 }
 
                 "==" -> {
-                    if (leftValue == rightValue) Value.True else Value.False
+                    if (leftValue is Value.BuiltinObject && rightValue is Value.BuiltinObject) {
+                        if (leftValue.type.name != rightValue.type.name) {
+                            Value.False
+                        } else {
+                            leftValue.type.methods["__eq__"]?.implementation?.invoke(listOf(leftValue, rightValue)) ?: throw IllegalArgumentException("No __eq__ method defined for type ${leftValue.type.name}")
+                        }
+                    } else {
+                        if (leftValue == rightValue) Value.True else Value.False
+                    }
+                }
+
+                "!=" -> {
+                    if (leftValue is Value.BuiltinObject && rightValue is Value.BuiltinObject) {
+                        if (leftValue.type.name != rightValue.type.name) {
+                            Value.True
+                        } else {
+                            leftValue.type.methods["__eq__"]?.implementation?.invoke(listOf(leftValue, rightValue))?.let { result ->
+                                if (result is Value.True) Value.False else Value.True
+                            } ?: throw IllegalArgumentException("No __eq__ method defined for type ${leftValue.type.name}")
+                        }
+                    } else {
+                        if (leftValue != rightValue) Value.True else Value.False
+                    }
+                }
+
+                ">=" -> {
+                    when (leftValue) {
+                        is Value.Int if rightValue is Value.Int -> if (leftValue.value >= rightValue.value) Value.True else Value.False
+                        is Value.Decimal if rightValue is Value.Decimal -> if (leftValue.value >= rightValue.value) Value.True else Value.False
+                        else -> throw IllegalArgumentException("Unsupported operand types for >=: ${leftValue::class.simpleName} and ${rightValue::class.simpleName}")
+                    }
+                }
+
+                "<=" -> {
+                    when (leftValue) {
+                        is Value.Int if rightValue is Value.Int -> if (leftValue.value <= rightValue.value) Value.True else Value.False
+                        is Value.Decimal if rightValue is Value.Decimal -> if (leftValue.value <= rightValue.value) Value.True else Value.False
+                        else -> throw IllegalArgumentException("Unsupported operand types for <=: ${leftValue::class.simpleName} and ${rightValue::class.simpleName}")
+                    }
                 }
 
 
@@ -298,6 +336,14 @@ class Interpreter(val file: File, val predeclarations: Map<String, Binding>, val
 
                 else -> throw IllegalArgumentException("Unsupported unary operator: ${expression.operator.type.value}")
             }
+        }
+
+        is Expression.ListLiteral -> {
+            val elements = expression.elements.map { evaluateExpression(it, context) }
+            val iter = Value.Iterable { elements.iterator() }
+
+            val listType = context.getDeclarationByName("list") as? Value.Type ?: throw IllegalArgumentException("No type found for 'list' in context")
+            listType.implementation(listOf(iter))
         }
 
         else -> throw IllegalArgumentException("Unsupported expression type: ${expression::class.simpleName}")

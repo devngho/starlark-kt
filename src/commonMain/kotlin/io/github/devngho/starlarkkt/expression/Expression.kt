@@ -50,6 +50,7 @@ sealed interface Expression {
 
         companion object {
             val opLeftPrecedence = mapOf(
+                "if" to 0,
                 "or" to 1,
                 "and" to 3,
                 "==" to 5, "!=" to 5, "<" to 5, ">" to 5, "<=" to 5, ">=" to 5, "in" to 5, "not in" to 5,
@@ -63,6 +64,7 @@ sealed interface Expression {
             )
 
             val opRightPrecedence = mapOf(
+                "if" to -1,
                 "or" to 2,
                 "and" to 4,
                 "==" to 6, "!=" to 6, "<" to 6, ">" to 6, "<=" to 6, ">=" to 6, "in" to 6, "not in" to 6,
@@ -90,6 +92,14 @@ sealed interface Expression {
             val opPrecedence = mapOf(
                 "+" to 100, "-" to 100, "~" to 100, "not" to 100
             )
+        }
+    }
+
+    data class ConditionalOp(val condition: Expression, val trueBranch: Expression, val falseBranch: Expression) : Expression {
+        override fun toString(): String = "($condition ? $trueBranch : $falseBranch)"
+
+        companion object {
+            const val PRECEDENCE = 20
         }
     }
 
