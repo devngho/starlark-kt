@@ -1,6 +1,5 @@
 # starlark-kt
 
-// create an alert quote
 > [!CAUTION]
 > This project is WIP and provided as-is.
 
@@ -15,3 +14,15 @@ By contrast, this project is not intended to be:
 - performant (maybe later)
 - match the original Starlark spec exactly
   - for example, this project omits octal escapes and Unicode escapes in strings and allows fixed-number of arguments in function calls (no *args or **kwargs)
+
+## Todo
+- work
+- cleanup code
+- extension
+
+## License
+
+MIT License ❤️
+
+This project uses open-source libraries/codes:
+- [bazelbuild/starlark](https://github.com/bazelbuild/starlark) - Apache 2.0
